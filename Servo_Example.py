@@ -4,7 +4,7 @@ from Adafruit_PWM_Servo_Driver import PWM
 import time
 
 # ===========================================================================
-# Example Code
+# Example Code - to be manipulated for work on the PI with servos and lighting....
 # ===========================================================================
 
 # Initialise the PWM device using the default address
