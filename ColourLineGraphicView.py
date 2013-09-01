@@ -5,6 +5,10 @@ import math
 from PyQt4 import QtCore, QtGui
 import numpy as np
 
+####Create a dictionary to define this particular Colour Picker Image and Layout
+ColourPickerCircle = {"centerOffset": [20,16] , "radius": 210 , "filename": "images/ColorWheelSat_500.png"}
+
+
 def norm(vec):
     """function to normalise a vector - creating the unit vector"""
     return vec/np.linalg.norm(vec)
@@ -18,7 +22,6 @@ def npVec(vec):
 def QPVec(npVec):
     """Converts an np array into a QPoint"""
     return QtCore.QPointF(npVec[0], npVec[1])
-
 
 class RigCurveInfo():
     """A Class to capture how the """
@@ -212,9 +215,7 @@ class Node(QtGui.QGraphicsItem):
         # x,y = self.map_temptime_to_pos()
         self.setPos(xPos,yPos)
         self.marker = False
-
-
-
+        self.move_restrict_Circle = QtGui.QGraphicsEllipseItem(2*ColourPickerCircle["centerOffset"][0],2*ColourPickerCircle["centerOffset"][1], 2*ColourPickerCircle["radius"],2*ColourPickerCircle["radius"])
 
     def type(self):
         return Node.Type
@@ -277,15 +278,18 @@ class Node(QtGui.QGraphicsItem):
     def mouseReleaseEvent(self, event):
         if not self.graph().inhibit_edit:
             self.update()
-            print "Node Pos: " + str(self.pos())
-            #
+            # print "Node Pos: " + str(self.pos())
             QtGui.QGraphicsItem.mouseReleaseEvent(self, event)
+
+    def mouseMoveEvent(self, event):
+        # check of mouse moved within the restricted area for the item 
+        if self.move_restrict_Circle.contains(event.scenePos()):
+            QtGui.QGraphicsItem.mouseMoveEvent(self, event)
 
 ###
 class Colour_GraphicsView(QtGui.QGraphicsView):
     def __init__(self):
         QtGui.QGraphicsView.__init__(self) 
-
         self.size = (0, 0, 600, 500)
         self.img = None
         #
@@ -311,6 +315,7 @@ class Colour_GraphicsView(QtGui.QGraphicsView):
         self.setMinimumSize(600, 400)
         self.setWindowTitle(self.tr("Elastic Nodes"))
         self.inhibit_edit = False
+        self.setBackgroundImage(ColourPickerCircle["filename"])
         # self.add_curve()
         # self.addRigControl([[20,20],[265,66],[325,205],[200,400],[100,200],[250,400],[650,300]])
         self.addRigControl([[290,80],[384,137],[424,237],[381,354]])
