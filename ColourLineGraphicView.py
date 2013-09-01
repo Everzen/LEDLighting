@@ -6,8 +6,6 @@ from PyQt4 import QtCore, QtGui
 import numpy as np
 
 ####Create a dictionary to define this particular Colour Picker Image and Layout
-ColourPickerCircle = {"centerOffset": [20,16] , "radius": 210 , "filename": "images/ColorWheelSat_500.png"}
-
 
 def norm(vec):
     """function to normalise a vector - creating the unit vector"""
@@ -22,6 +20,63 @@ def npVec(vec):
 def QPVec(npVec):
     """Converts an np array into a QPoint"""
     return QtCore.QPointF(npVec[0], npVec[1])
+
+
+class colourGrab():
+    """Class to return a colour value from an x,y coordinate. Assumes circle of radius 1"""
+    def __init__(self,radius=1, hThreshold = 0.01, sThreshold = 0.03):
+        self.x = None
+        self.y = None
+        self.radius = radius
+        self.sThreshold = sThreshold
+        self.hThreshold = hThreshold
+        self.colour = [0,0,0]
+        self.currentColour = [0,0,0]
+
+    def setPos(self,nodePos):
+        self.x = nodePos[0]
+        self.y = nodePos[1]
+
+    def setRadius(self,Rad):
+        self.radius = Rad
+
+    def setThreshold(self,threshold):
+        self.threshold = threshold
+
+    def getH(self):
+        """Function to find and return distance which is Hue"""
+        hAngle = (math.atan2(self.y,self.x))/(2*math.pi)
+        if self.y < 0:
+            hAngle = 1 + hAngle 
+        return hAngle
+
+    def getS(self):
+        """Function to find and return distance which is Saturation"""
+        sValue = math.sqrt((math.pow(self.x,2)) + (math.pow(self.y,2)))/self.radius
+        return sValue
+
+    def getHSV(self):
+        """Function to get the HSV value this value will always have a value of 1"""
+        colour = [self.getH(), self.getS(),1]
+        return colour
+
+    def getDifference(self,colour):
+        if math.fabs(colour[0] - self.colour[0]) > self.hThreshold or math.fabs(colour[1] - self.colour[1]) > self.sThreshold:
+            return True
+        else: False
+
+    def mouseMoveExecute(self):
+        """This is the class to broadcast UDP data out"""
+        newColour = self.getHSV()
+        if self.getDifference(newColour):
+            self.colour = newColour
+            self.currentColour = newColour
+            print " The colour has been updated to : " + str(self.colour)
+        else:
+            print "Difference is not enough to change colour" 
+            return self.currentColour
+
+
 
 class RigCurveInfo():
     """A Class to capture how the """
@@ -80,12 +135,6 @@ class RigCurveInfo():
     def getPerpSwing(self):
         return self.perpSwing
 
-    # def setSideSwing(self):
-    #     targetVec = norm(self.targPos - self.startPos)
-    #     perpSwing = np.dot(self.PerpUnitVec, self.targetVec)
-    #     sideSwitch = 1 
-    #     if perpSwing > 0: 
-    #         sideSwitch = 1
 
 
 class RigCurve(QtGui.QGraphicsItem):
@@ -93,19 +142,7 @@ class RigCurve(QtGui.QGraphicsItem):
         super(RigCurve, self).__init__(parent, scene)
         self.selected = False
         self.color = color
-        #Experimemting with setting up some weak references to the Control Nodes - Need to feed in Control Nodes! 
-        # self.startNode = weakref.ref(controlNodes[0])
-        # self.endNode = weakref.ref(controlNodes[1])
-        # self.targNode = weakref.ref(controlNodes[2])
         self.nodeList = self.getNodeList(controlNodes)
-        # print "NODE LIST : " + str(self.nodeList)
-        # print "Ctrl Node Pos : " + str(self.startNode().pos())
-        # print "Ctrl Node Pos : " + str(self.endNode().pos())
-        # print "Ctrl Node Pos : " + str(self.targNode().pos())
-        # self.startNode().addRigCurve(self)
-        # self.endNode().addRigCurve(self)
-        # self.targNode().addRigCurve(self)
-
         self.curveSwing = 0.25
         self.handlescale = 0.3
         self.secondHandleScale = 0.5
@@ -197,7 +234,7 @@ class RigCurve(QtGui.QGraphicsItem):
 class Node(QtGui.QGraphicsItem):
     Type = QtGui.QGraphicsItem.UserType + 1
 
-    def __init__(self, graphWidget, xPos, yPos):
+    def __init__(self, graphWidget, xPos, yPos, circleDefinition=None, moveThreshold=5, operatorClass = None):
         QtGui.QGraphicsItem.__init__(self)
 
         self.graph = weakref.ref(graphWidget)
@@ -209,13 +246,18 @@ class Node(QtGui.QGraphicsItem):
         self.setFlag(QtGui.QGraphicsItem.ItemSendsGeometryChanges)
         self.setCacheMode(self.DeviceCoordinateCache)
         self.setZValue(-1)
+        self.circleDefinition = circleDefinition
+        self.move_restrict_circle = None
+        self.operatorClass = operatorClass
         #
+
         # self.temp = temp
         # self.time = time
         # x,y = self.map_temptime_to_pos()
         self.setPos(xPos,yPos)
         self.marker = False
-        self.move_restrict_Circle = QtGui.QGraphicsEllipseItem(2*ColourPickerCircle["centerOffset"][0],2*ColourPickerCircle["centerOffset"][1], 2*ColourPickerCircle["radius"],2*ColourPickerCircle["radius"])
+        if self.circleDefinition:
+            self.move_restrict_circle = QtGui.QGraphicsEllipseItem(2*self.circleDefinition["centerOffset"][0],2*self.circleDefinition["centerOffset"][1], 2*self.circleDefinition["radius"],2*self.circleDefinition["radius"])
 
     def type(self):
         return Node.Type
@@ -283,15 +325,22 @@ class Node(QtGui.QGraphicsItem):
 
     def mouseMoveEvent(self, event):
         # check of mouse moved within the restricted area for the item 
-        if self.move_restrict_Circle.contains(event.scenePos()):
-            QtGui.QGraphicsItem.mouseMoveEvent(self, event)
+        if self.circleDefinition:
+            if self.move_restrict_circle.contains(event.scenePos()):
+                QtGui.QGraphicsItem.mouseMoveEvent(self, event)
+                if self.operatorClass:
+                    nodePos = self.pos() - QPVec(self.circleDefinition["center"])
+                    self.operatorClass.setPos(npVec(nodePos))
+                    self.operatorClass.mouseMoveExecute() #Execute our defined operator class through the move event
+        else: QtGui.QGraphicsItem.mouseMoveEvent(self, event)
 
 ###
 class Colour_GraphicsView(QtGui.QGraphicsView):
-    def __init__(self):
+    def __init__(self, circleDefinition):
         QtGui.QGraphicsView.__init__(self) 
         self.size = (0, 0, 600, 500)
         self.img = None
+        self.CircleDefinition = circleDefinition
         #
         policy = QtCore.Qt.ScrollBarAlwaysOff
         self.setVerticalScrollBarPolicy(policy)
@@ -315,7 +364,7 @@ class Colour_GraphicsView(QtGui.QGraphicsView):
         self.setMinimumSize(600, 400)
         self.setWindowTitle(self.tr("Elastic Nodes"))
         self.inhibit_edit = False
-        self.setBackgroundImage(ColourPickerCircle["filename"])
+        self.setBackgroundImage(self.CircleDefinition["filename"])
         # self.add_curve()
         # self.addRigControl([[20,20],[265,66],[325,205],[200,400],[100,200],[250,400],[650,300]])
         self.addRigControl([[290,80],[384,137],[424,237],[381,354]])
@@ -335,7 +384,8 @@ class Colour_GraphicsView(QtGui.QGraphicsView):
         self.nodecount += 1
         scene = self.scene()
         # Insert Node into scene
-        node = Node(self, xPos, yPos)
+        colourGrabber = colourGrab(radius = self.CircleDefinition["radius"])
+        node = Node(self, xPos, yPos, circleDefinition =  self.CircleDefinition, operatorClass = colourGrabber)
         scene.addItem(node)
         return node
 
