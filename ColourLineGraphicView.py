@@ -22,6 +22,31 @@ def QPVec(npVec):
     return QtCore.QPointF(npVec[0], npVec[1])
 
 
+class colourValueSliderBackGround(QtGui.QGraphicsItem):
+    def __init__(self):
+        super(colourValueSliderBackGround, self).__init__()
+        #VALUE SLIDER
+        self.brush = None
+        self.createSlider()
+        # self.slider.setBrush(g)
+
+    def createSlider(self):
+        self.gradStart = QtCore.QPointF(500,40)
+        self.gradEnd = QtCore.QPointF(500,450)
+        self.gradient = QtGui.QLinearGradient(self.gradStart, self.gradEnd)
+        self.gradient.setColorAt(1.0, QtGui.QColor(0,0,0))
+        self.gradient.setColorAt(0.0, QtGui.QColor(255,255,255))
+
+    def paint(self, painter, option, widget):
+        painter.drawRect(500,40,20,410)
+        painter.fillRect(500,40,20,410,self.gradient)
+        # painter.setBrush(self.gradient)
+
+    def boundingRect(self):
+        return QtCore.QRectF(500,40,20,410)
+
+
+
 class colourGrab():
     """Class to return a colour value from an x,y coordinate. Assumes circle of radius 1"""
     def __init__(self,radius=1, hThreshold = 0.01, sThreshold = 0.03):
@@ -168,7 +193,8 @@ class RigCurve(QtGui.QGraphicsItem):
         return self.path.boundingRect()
 
     def paint(self, painter, option, widget):
-        painter.setPen(self.color)
+        pen = QtGui.QPen(QtCore.Qt.black, 1.2, QtCore.Qt.DotLine)
+        painter.setPen(pen)
         painter.setBrush(self.color)
         painter.strokePath(self.path, painter.pen())
 
@@ -290,7 +316,7 @@ class Node(QtGui.QGraphicsItem):
                              22 + adjust, 23 + adjust)
 
     def paint(self, painter, option, widget):
-        painter.drawLine(QtCore.QLineF(6,-40,6,-2))
+        # painter.drawLine(QtCore.QLineF(6,-40,6,-2))
         painter.setPen(QtCore.Qt.NoPen)
         painter.setBrush(QtCore.Qt.lightGray)
         painter.drawEllipse(-10, -10, 20, 20)
@@ -369,7 +395,11 @@ class Colour_GraphicsView(QtGui.QGraphicsView):
         # self.addRigControl([[20,20],[265,66],[325,205],[200,400],[100,200],[250,400],[650,300]])
         self.addRigControl([[290,80],[384,137],[424,237],[381,354]])
 
-        # self.addRigControl([[150,150],[365,120],[600,250],[300,400]])
+        #Value Slider
+        valueSlider = colourValueSliderBackGround()
+        scene.addItem(valueSlider)
+
+
 
     def setBackgroundImage(self,imagepath):
         self.img = imagepath
@@ -425,7 +455,7 @@ class Colour_GraphicsView(QtGui.QGraphicsView):
         sceneRect = self.sceneRect()
         # print "Back image is: " + str(self.img)
 
-    def addRigControl(self, controlPosList, color = QtGui.QColor(255, 0, 0)):
+    def addRigControl(self, controlPosList, color = QtGui.QColor(0, 0, 0)):
         scene = self.scene()
         rigCurveNodes = []
         for p in controlPosList:
