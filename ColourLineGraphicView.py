@@ -19,6 +19,7 @@ def QPVec(npVec):
     """Converts an np array into a QPoint"""
     return QtCore.QPointF(npVec[0], npVec[1])
 
+
 class RigCurveInfo():
     """A Class to capture how the """
     def __init__(self,startNode, endNode, targNode):
@@ -94,7 +95,7 @@ class RigCurve(QtGui.QGraphicsItem):
         # self.endNode = weakref.ref(controlNodes[1])
         # self.targNode = weakref.ref(controlNodes[2])
         self.nodeList = self.getNodeList(controlNodes)
-        print "NODE LIST : " + str(self.nodeList)
+        # print "NODE LIST : " + str(self.nodeList)
         # print "Ctrl Node Pos : " + str(self.startNode().pos())
         # print "Ctrl Node Pos : " + str(self.endNode().pos())
         # print "Ctrl Node Pos : " + str(self.targNode().pos())
@@ -123,21 +124,6 @@ class RigCurve(QtGui.QGraphicsItem):
     def set_selected(self, selected):
         self.selected = selected
 
-    def contains_point(self, x, y, epsilon):
-        p = (x, y)
-        min_distance = float(0x7fffffff)
-        t = 0.0
-        while t < 1.0:
-            point = self.path.pointAtPercent(t)
-            spline_point = (point.x(), point.y())
-            print p, spline_point
-            distance = self.distance(p, spline_point)
-            if distance < min_distance:
-                min_distance = distance
-            t += 0.1
-        print min_distance, epsilon
-        return (min_distance <= epsilon)
-
     def boundingRect(self):
         return self.path.boundingRect()
 
@@ -145,11 +131,6 @@ class RigCurve(QtGui.QGraphicsItem):
         painter.setPen(self.color)
         painter.setBrush(self.color)
         painter.strokePath(self.path, painter.pen())
-
-    def distance(self, p0, p1):
-        a = p1[0] - p0[0]
-        b = p1[1] - p0[1]
-        return sqrt(a * a + b * b)
 
     def buildCurve(self):
         """Function to build section of Bezier"""
@@ -172,8 +153,8 @@ class RigCurve(QtGui.QGraphicsItem):
             #Now set the next handle of the endpoint to be the same tangent, but scaled in proportion to the length of the endnode -> targetnode segment 
             cPNext = (endPoint - cP2)*self.secondHandleScale*curveInfo.getTargetNodeDist()/curveInfo.getDirDist() + endPoint
             self.nodeList[1]().setBezierHandles(cPNext, 1)
-            print "End Node Handle Test : " + str(self.nodeList[1]().getBezierHandles(0))
-            print "End Node Handle Test : " + str(self.nodeList[1]().getBezierHandles(1))
+            # print "End Node Handle Test : " + str(self.nodeList[1]().getBezierHandles(0))
+            # print "End Node Handle Test : " + str(self.nodeList[1]().getBezierHandles(1))
             # print "CP1 : " + str(cP1)
             # print "CP2 : " + str(cP2)
             #Move the points out along the the perpendicular vector by a 3rd of the magnitude
@@ -209,78 +190,7 @@ class RigCurve(QtGui.QGraphicsItem):
             self.path.cubicTo(QPVec(cP1),QPVec(cP2),QPVec(startPoint))
 
 
-
-
-###
-class Edge(QtGui.QGraphicsItem):
-    Type = QtGui.QGraphicsItem.UserType + 2
-
-    def __init__(self, sourceNode, destNode):
-        QtGui.QGraphicsItem.__init__(self)
-        #
-        self.sourcePoint = QtCore.QPointF()
-        self.destPoint = QtCore.QPointF()
-        self.setAcceptedMouseButtons(QtCore.Qt.NoButton)
-        self.source = weakref.ref(sourceNode)
-        self.dest = weakref.ref(destNode)
-        self.source().addEdge(self)
-        self.dest().addEdge(self)
-        self.set_index()
-        self.adjust()
-
-    def type(self):
-        return Edge.Type
-
-    def sourceNode(self):
-        return self.source()
-
-    def setSourceNode(self, node):
-        self.source = weakref.ref(node)
-        self.adjust()
-
-    def destNode(self):
-        return self.dest()
-
-    def setDestNode(self, node):
-        self.dest = weakref.ref(node)
-        self.adjust()
-
-    def set_index(self):
-        self.setToolTip(self.source().label)
-
-    def adjust(self):
-        # do we have a line to draw ?
-        if  self.source() and self.dest():
-            line = QtCore.QLineF(self.mapFromItem(self.source(), 0, 0), self.mapFromItem(self.dest(), 0, 0))
-            length = line.length()
-            if length > 20:
-                edgeOffset = QtCore.QPointF((line.dx() * 10) / length, (line.dy() * 10) / length)
-                self.prepareGeometryChange()
-                self.sourcePoint = line.p1() + edgeOffset
-                self.destPoint   = line.p2() - edgeOffset
-            else: # want to make sure line not drawn
-                self.prepareGeometryChange()
-                self.sourcePoint = self.destPoint 
-
-    def boundingRect(self):
-        # do we have a line to draw ?
-        if not self.source() or not self.dest():
-            return QtCore.QRectF()
-        else:
-            extra = 1
-            return QtCore.QRectF(self.sourcePoint,
-                                 QtCore.QSizeF(self.destPoint.x() - self.sourcePoint.x(),
-                                               self.destPoint.y() - self.sourcePoint.y())).normalized().adjusted(-extra, -extra, extra, extra)
-
-    def paint(self, painter, option, widget):
-        if self.source() and self.dest():
-            # Draw the line itself.
-            line = QtCore.QLineF(self.sourcePoint, self.destPoint)
-            if line.length() > 0.0:
-                painter.setPen(QtGui.QPen(QtCore.Qt.black, 1, QtCore.Qt.SolidLine, QtCore.Qt.RoundCap, QtCore.Qt.RoundJoin))
-                painter.drawLine(line)
-
-###
+###Nodes for selection in the Graphics View
 class Node(QtGui.QGraphicsItem):
     Type = QtGui.QGraphicsItem.UserType + 1
 
@@ -288,7 +198,6 @@ class Node(QtGui.QGraphicsItem):
         QtGui.QGraphicsItem.__init__(self)
 
         self.graph = weakref.ref(graphWidget)
-        self.edgeList = []
         self.rigCurveList = []
         self.bezierHandles = [None, None]
         self.set_index(-1)
@@ -310,9 +219,6 @@ class Node(QtGui.QGraphicsItem):
     def type(self):
         return Node.Type
 
-    def addEdge(self, edge):
-        self.edgeList.append(weakref.ref(edge))
-
     def addRigCurve(self, rigCurve):
         self.rigCurveList.append(weakref.ref(rigCurve))
         # print "Rig Curve List is : " + str(self.rigCurveList) + " - for Node :" + str(self)
@@ -329,34 +235,6 @@ class Node(QtGui.QGraphicsItem):
         self.index = index
         self.label = "Step %d" % index
         self.setToolTip(self.label)
-
-    def get_prev_edge(self):
-        index = 1000
-        edge = False
-        for e in self.edgeList:
-            sn = e().source().index
-            dn = e().dest().index
-            if sn < index:
-                index = sn
-                edge = e
-            if dn < index:
-                index = dn
-                edge = e
-        return edge
-
-    def get_next_edge(self):
-        index = -1
-        edge = False
-        for e in self.edgeList:
-            sn = e().source().index
-            dn = e().dest().index
-            if sn > index:
-                index = sn
-                edge = e
-            if dn > index:
-                index = dn
-                edge = e
-        return edge
 
     def map_temptime_to_pos(self):
         x = self.time * self.graph().graph_width_ratio
@@ -385,8 +263,6 @@ class Node(QtGui.QGraphicsItem):
 
     def itemChange(self, change, value):
         if change == QtGui.QGraphicsItem.ItemPositionChange:
-            for edge in self.edgeList:
-                edge().adjust()
             for rigCurve in self.rigCurveList:
                 rigCurve().buildCurve()
         # print "Item new position :" + str(self.pos().x()) + ", " + str(self.pos().y())
@@ -395,28 +271,22 @@ class Node(QtGui.QGraphicsItem):
     def mousePressEvent(self, event):
         if not self.graph().inhibit_edit:
             self.update()
-            print "Node pressed"
+            # print "Node pressed"
             QtGui.QGraphicsItem.mousePressEvent(self, event)
 
     def mouseReleaseEvent(self, event):
         if not self.graph().inhibit_edit:
             self.update()
-            print "Node released"
+            print "Node Pos: " + str(self.pos())
             #
             QtGui.QGraphicsItem.mouseReleaseEvent(self, event)
 
-
-
-class Colour_LittleGV(QtGui.QGraphicsView):
-    def __init__(self):
-        super(Colour_LittleGV, self).__init__(parent=None)
-        print "This is a new little GV"
 ###
 class Colour_GraphicsView(QtGui.QGraphicsView):
     def __init__(self):
         QtGui.QGraphicsView.__init__(self) 
 
-        self.size = (0, 0, 500, 500)
+        self.size = (0, 0, 600, 500)
         self.img = None
         #
         policy = QtCore.Qt.ScrollBarAlwaysOff
@@ -443,7 +313,7 @@ class Colour_GraphicsView(QtGui.QGraphicsView):
         self.inhibit_edit = False
         # self.add_curve()
         # self.addRigControl([[20,20],[265,66],[325,205],[200,400],[100,200],[250,400],[650,300]])
-        self.addRigControl([[20,20],[265,66],[325,205],[100,100]])
+        self.addRigControl([[290,80],[384,137],[424,237],[381,354]])
 
         # self.addRigControl([[150,150],[365,120],[600,250],[300,400]])
 
@@ -462,16 +332,6 @@ class Colour_GraphicsView(QtGui.QGraphicsView):
         # Insert Node into scene
         node = Node(self, xPos, yPos)
         scene.addItem(node)
-        # Insert new edges
-        nodes = self.get_ordered_nodes()
-        if len(nodes) > 1:
-            e = Edge(nodes[-2], node)
-            scene.addItem(e)
-        # cleanup edge tooltips
-        for n in self.get_ordered_nodes():
-            edges = n.edgeList
-            for e in edges:
-                e().set_index()
         return node
 
     def get_ordered_nodes(self):
@@ -489,7 +349,7 @@ class Colour_GraphicsView(QtGui.QGraphicsView):
             QtGui.QGraphicsView.keyPressEvent(self, event)
 
     def mousePressEvent(self, event):
-        print "GraphWidget mouse"
+        # print "GraphWidget mouse"
         QtGui.QGraphicsView.mousePressEvent(self, event)
 
     def wheelEvent(self, event):
@@ -518,30 +378,7 @@ class Colour_GraphicsView(QtGui.QGraphicsView):
             # ctrlPoint = QtCore.QPointF(p[0], p[1])
             rigCurveNodes.append(newNode)
             # rigCurveNodes.append(ctrlPoint)
-        print "Node List : " + str(rigCurveNodes)
-        for n in rigCurveNodes: print "Node Pos : " + str(n.pos())
+        # print "Node List : " + str(rigCurveNodes)
+        # for n in rigCurveNodes: print "Node Pos : " + str(n.pos())
         curve = RigCurve(color, rigCurveNodes)
         scene.addItem(curve)
-
-    # def add_curve(self):
-    #     scene = self.scene()
-    #     color = QtGui.QColor(255, 0, 0)
-    #     x0 = 10.0
-    #     y0 = 10.0
-    #     x1 = 30.0
-    #     y1 = 20.0
-    #     x2 = 60.0
-    #     y2 = 10.0
-    #     x3 = 100.0
-    #     y3 = 100.0
-    #     control_points = (QtCore.QPointF(x0, y0), QtCore.QPointF(x1, y1),
-    #         QtCore.QPointF(x2, y2), QtCore.QPointF(x3, y3))
-    #     curve = RigCurve(color, control_points)
-    #     scene.addItem(curve)
-
-
-# if __name__ == "__main__":
-#     app = QtGui.QApplication(sys.argv)
-#     widget = GraphWidget()
-#     widget.show()
-#     sys.exit(app.exec_())
