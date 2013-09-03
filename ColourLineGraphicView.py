@@ -76,6 +76,7 @@ class colourGrab():
     def setPos(self,nodePos):
         self.x = nodePos[0]
         self.y = nodePos[1]
+        print "Node Pos " + str(self.index) + ": " + str(self.x) + "," + str(self.y)
 
     def setRadius(self,Rad):
         self.radius = Rad
@@ -103,7 +104,7 @@ class colourGrab():
 
     def getHSV(self):
         """Function to get the HSV value this value will always have a value of 1"""
-        colour = [self.getH(), self.getS(),self.colour[2]]
+        colour = [self.getH(), self.getS(), self.colour[2]]
         return colour
 
     def getDifference(self,colour):
@@ -121,10 +122,12 @@ class colourGrab():
             self.colour = newColour
             self.currentColour = newColour
             self.colourBroadcaster.broadcast()
+            print "New colour returning : " + str(self.currentColour) 
             return self.colour
             # print " The colour has been updated to : " + str(self.colour)
         else:
-            # print "Difference is not enough to change colour" 
+            # print "Difference is not enough to change colour"
+            print "Current colour returning : " + str(self.currentColour)  
             return self.currentColour
 
 
@@ -388,7 +391,8 @@ class Node(QtGui.QGraphicsItem):
         self.marker = False
         if self.circleDefinition:
             self.move_restrict_circle = QtGui.QGraphicsEllipseItem(2*self.circleDefinition["centerOffset"][0],2*self.circleDefinition["centerOffset"][1], 2*self.circleDefinition["radius"],2*self.circleDefinition["radius"])
-        self.operatorClass.setPos([xPos,yPos]) #Set colourGrabber position
+        offsetPos = self.pos() - QPVec(self.circleDefinition["center"])
+        self.operatorClass.setPos([offsetPos.x(),offsetPos.y()]) #Set colourGrabber position
         self.operatorClass.mouseMoveExecute() # Set the initial colour
 
     def setIndex(self,value):
@@ -458,6 +462,7 @@ class Node(QtGui.QGraphicsItem):
                 QtGui.QGraphicsItem.mouseMoveEvent(self, event)
                 if self.operatorClass:
                     nodePos = self.pos() - QPVec(self.circleDefinition["center"])
+                    # print "Node Pos " + str(self.index) + ": " + str(nodePos.x()) + "," + str(nodePos.y())
                     self.operatorClass.setPos(npVec(nodePos))
                     self.operatorClass.mouseMoveExecute() #Execute our defined operator class through the move event
         else: QtGui.QGraphicsItem.mouseMoveEvent(self, event)
