@@ -29,7 +29,7 @@ class LightVoltage():
 
 #CONNECTION DATA
 HOST = "localhost" #"192.168.1." + str(sys.argv[1])
-PORT = int(sys.argv[2])
+PORT = int(sys.argv[1])
 
 s= socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 s.bind((HOST,PORT))
