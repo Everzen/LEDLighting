@@ -5,6 +5,10 @@ import time
 import colorsys
 import sys
 
+# Initialise the PWM device using the default address
+pwm = PWM(0x40, debug=True)
+pwm.setPWMFreq(60)                        # Set frequency to 60 Hz
+
 #LIGHT DATA
 class LightVoltage():
 	def __init__(self,colourList):
@@ -24,7 +28,7 @@ class LightVoltage():
 
 
 #CONNECTION DATA
-HOST = str(sys.argv[1])
+HOST = "localhost" #"192.168.1." + str(sys.argv[1])
 PORT = int(sys.argv[2])
 
 s= socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
