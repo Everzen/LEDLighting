@@ -12,12 +12,6 @@ class LED_ColourPicker(QtGui.QWidget):
         self.ColourPickerCircle = {"center" : [245, 245], "centerOffset": [20,16] , "radius": 210 , "filename": "images/ColorWheelSat_500.png"}
         self.iP = str(sys.argv[1])
         self.port = str(sys.argv[2])
-
-        #Setup Style Sheet information
-        f=open('css/darkorange.stylesheet', 'r')
-        self.styleData = f.read()
-        f.close()
-        # print str(self.styleData)
         self.initUI()
        
        
@@ -27,8 +21,7 @@ class LED_ColourPicker(QtGui.QWidget):
 
         vbox.addWidget(self.view)
         self.setLayout(vbox)
-        self.setStyleSheet(self.styleData) #Set the Style Sheet
-
+        
     
     def changeValue(self, value):
         self.view.rect.doRotate(value)     
